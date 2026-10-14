@@ -140,8 +140,27 @@ def make_activation(kind="relu"):
         'backward': backward
     }
 
-# Step 5 - initialize_weights (not yet solved)
-# TODO: implement
+# Step 5 - initialize_weights
+def initialize_weights(in_dim, out_dim, scheme="he"):
+    """
+    Initializes weights W and biases b using the requested scaling metric.
+    Returns:
+        W: array of shape (in_dim, out_dim)
+        b: array of shape (out_dim,)
+    """
+    if scheme == "he":
+        std = np.sqrt(2.0 / in_dim)
+    elif scheme == "xavier":
+        std = np.sqrt(2.0 / (in_dim + out_dim))
+    else:
+        raise ValueError(f"Unknown initialization scheme: {scheme}")
+        
+    # Generate weights from normal distribution and scale by standard deviation
+    W = np.random.randn(in_dim, out_dim) * std
+    # Initialize biases to zeros
+    b = np.zeros(out_dim)
+    
+    return W, b
 
 # Step 6 - make_loss (not yet solved)
 # TODO: implement
