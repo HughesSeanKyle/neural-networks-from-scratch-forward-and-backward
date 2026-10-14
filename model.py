@@ -112,26 +112,38 @@ def make_dense(in_dim, out_dim, weight_init_fn):
 # Step 4 - make_activation
 def make_activation(kind="relu"):
     """
-    Creates an activation layer matching the API contract.
+    Creates an activation layer matching the protocol contract.
+    Supports "relu" and "tanh".
+    
     CONTRACT:
         forward(x) -> (y, cache)
         backward(dout, cache) -> (dx, grads)
     """
-    if kind != "relu":
+    if kind not in ("relu", "tanh"):
         raise ValueError(f"Unsupported activation type: {kind}")
         
     def forward(x):
-        # Store the original x in cache for the backward pass mask
-        cache = x
-        y = np.maximum(0, x)
+        if kind == "relu":
+            # For ReLU, cache the input x to construct the activation mask later
+            cache = x
+            y = np.maximum(0, x)
+        elif kind == "tanh":
+            # For Tanh, computing the derivative is faster if we cache the output y
+            y = np.tanh(x)
+            cache = y
         return y, cache
         
     def backward(dout, cache):
-        x = cache
-        # dx is dout where x > 0, and 0 everywhere else
-        dx = dout * (x > 0)
-        # Activation layers contain no learnable parameters
-        grads = {}
+        grads = {} # Activation layers contain no learnable parameter arrays
+        
+        if kind == "relu":
+            x = cache
+            dx = dout * (x > 0)
+        elif kind == "tanh":
+            y = cache
+            # dL/dx = dout * (1 - y^2)
+            dx = dout * (1.0 - y ** 2)
+            
         return dx, grads
         
     return {
@@ -192,8 +204,57 @@ def make_loss(kind="cross_entropy"):
         
     return loss_fn
 
-# Step 7 - make_sequential (not yet solved)
-# TODO: implement
+# Step 7 - make_sequential
+def make_sequential(layers):
+    """
+    Compose protocol-honoring layers into one sequential model.
+    
+    CONTRACT:
+        forward(x) -> (y, caches)
+        backward(dout, caches) -> (dx, grads_list)
+        params: list of dicts referencing each layer's live parameter arrays in order.
+    """
+    # Aggregate a live list view of all individual layer parameters
+    params = [layer['params'] for layer in layers]
+    
+    def forward(x):
+        caches = []
+        current_activation = x
+        
+        # Route forward activations left-to-right
+        for layer in layers:
+            current_activation, cache = layer['forward'](current_activation)
+            caches.append(cache)
+            
+        return current_activation, caches
+        
+    def backward(dout, caches):
+        # Pre-allocate grads_list to preserve structural alignment with the input layers array
+        grads_list = [None] * len(layers)
+        current_dout = dout
+        
+        # Route backward gradients right-to-left
+        for idx in reversed(range(len(layers))):
+            layer = layers[idx]
+            cache = caches[idx]
+            
+            # Backpropagate through individual layer
+            dx, grads_dict = layer['backward'](current_dout, cache)
+            
+            # Store the computed layer gradients into the matching index slot
+            grads_list[idx] = grads_dict
+            
+            # Downstream gradient becomes upstream gradient for the next layer down
+            current_dout = dx
+            
+        return current_dout, grads_list
+        
+    return {
+        'params': params,
+        'layers': layers, # Preserved for internal architecture visibility
+        'forward': forward,
+        'backward': backward
+    }
 
 # Step 8 - forward_backward (not yet solved)
 # TODO: implement
