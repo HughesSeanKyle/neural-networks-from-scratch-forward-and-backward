@@ -162,8 +162,35 @@ def initialize_weights(in_dim, out_dim, scheme="he"):
     
     return W, b
 
-# Step 6 - make_loss (not yet solved)
-# TODO: implement
+# Step 6 - make_loss
+def make_loss(kind="cross_entropy"):
+    """
+    Creates a loss objective matching the loss layer contract.
+    CONTRACT:
+        loss_fn(score_logits, y) -> (loss_scalar, dscores)
+    """
+    if kind != "cross_entropy":
+        raise ValueError(f"Unsupported loss type: {kind}")
+        
+    def loss_fn(score_logits, y):
+        # 1. Softmax computation with numerical stability trick
+        shifted_logits = score_logits - np.max(score_logits, axis=1, keepdims=True)
+        exp_scores = np.exp(shifted_logits)
+        probs = exp_scores / np.sum(exp_scores, axis=1, keepdims=True)
+        
+        # 2. Compute scalar cross-entropy loss over the batch size
+        num_examples = score_logits.shape[0]
+        core_loss = -np.log(probs[np.arange(num_examples), y] + 1e-15)
+        loss_scalar = np.sum(core_loss) / num_examples
+        
+        # 3. Compute gradient with respect to logits (dscores)
+        dscores = probs.copy()
+        dscores[np.arange(num_examples), y] -= 1.0
+        dscores /= num_examples
+        
+        return float(loss_scalar), dscores
+        
+    return loss_fn
 
 # Step 7 - make_sequential (not yet solved)
 # TODO: implement
