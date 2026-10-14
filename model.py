@@ -331,8 +331,50 @@ def train_step(model, loss_fn, optimizer, x_batch, y_batch):
     # 3. Explicitly cast to and return a standard Python float
     return float(loss_scalar)
 
-# Step 11 - train (not yet solved)
-# TODO: implement
+# Step 11 - train
+def train(model, loss_fn, optimizer, x, y, epochs, batch_size, seed=0):
+    """
+    Run a deterministic minibatch training loop.
+    
+    CONTRACT:
+        history: list[float] of length `epochs`; history[t] is the mean
+                 train_step loss over all minibatches processed in epoch t.
+        Model parameters are updated in-place.
+    """
+    # Initialize a localized, isolated random state instance for reproducible shuffling
+    rng = np.random.RandomState(seed)
+    num_samples = x.shape[0]
+    history = []
+    
+    for epoch in range(epochs):
+        # 1. Deterministically shuffle index pointers at the start of each epoch
+        indices = rng.permutation(num_samples)
+        x_shuffled = x[indices]
+        y_shuffled = y[indices]
+        
+        epoch_losses = []
+        
+        # 2. Slice into mini-batches and execute optimization steps
+        for i in range(0, num_samples, batch_size):
+            xb = x_shuffled[i : i + batch_size]
+            yb = y_shuffled[i : i + batch_size]
+            
+            # Protect against empty slices if they occur
+            if xb.shape[0] == 0:
+                continue
+                
+            # Perform optimization step and retrieve the pre-update scalar float loss
+            batch_loss = train_step(model, loss_fn, optimizer, xb, yb)
+            epoch_losses.append(batch_loss)
+            
+        # 3. Cache the precise arithmetic mean loss observed across this epoch
+        if len(epoch_losses) > 0:
+            mean_loss = sum(epoch_losses) / len(epoch_losses)
+            history.append(float(mean_loss))
+        else:
+            history.append(0.0)
+            
+    return history
 
 # Step 12 - design_network (not yet solved)
 # TODO: implement
