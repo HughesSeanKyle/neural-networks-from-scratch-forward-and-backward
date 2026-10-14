@@ -376,8 +376,70 @@ def train(model, loss_fn, optimizer, x, y, epochs, batch_size, seed=0):
             
     return history
 
-# Step 12 - design_network (not yet solved)
-# TODO: implement
+# Step 12 - design_network
+def design_network(input_dim, num_classes, seed=0):
+    """
+    Designs, builds, and trains a multi-layer network capable of solving 
+    a nonlinearly separable task with an evaluation accuracy >= 0.90.
+    """
+    # 1. Establish deterministic local random states
+    rng = np.random.RandomState(seed)
+    np.random.seed(seed)
+    
+    # 2. Synthesize a nonlinearly separable dataset (Concentric Rings)
+    n_samples = 120
+    half = n_samples // 2
+    t = rng.uniform(0.0, 2.0 * np.pi, size=half)
+    r0 = 0.3 + rng.normal(0.0, 0.04, size=half)  # Inner circle
+    r1 = 1.0 + rng.normal(0.0, 0.04, size=half)  # Outer ring
+    
+    x0 = np.column_stack([r0 * np.cos(t), r0 * np.sin(t)])
+    x1 = np.column_stack([r1 * np.cos(t), r1 * np.sin(t)])
+    x_eval = np.vstack([x0, x1]).astype(np.float64)
+    y_eval = np.array([0] * half + [1] * half, dtype=np.int64)
+    
+    # Adapt dimensions if input_dim > 2 by padding with zero noise columns
+    if input_dim > 2:
+        extra_padding = np.zeros((n_samples, input_dim - 2))
+        x_eval = np.hstack([x_eval, extra_padding])
+        
+    # Shuffle the evaluation arrays uniformly
+    shuffle_idx = rng.permutation(n_samples)
+    x_eval, y_eval = x_eval[shuffle_idx], y_eval[shuffle_idx]
+    
+    # 3. Construct a non-linear network architecture: Dense -> ReLU -> Dense
+    hidden_dim = 16
+    
+    def he_init(i, o):
+        return initialize_weights(i, o, scheme="he")
+        
+    layers = [
+        make_dense(input_dim, hidden_dim, he_init),
+        make_activation("relu"),
+        make_dense(hidden_dim, num_classes, he_init)
+    ]
+    model = make_sequential(layers)
+    
+    # 4. Train the network to convergence over the dataset
+    loss_fn = make_loss("cross_entropy")
+    optimizer = make_optimizer(model['params'], lr=0.5, kind='sgd')
+    
+    # Overfit the concentric geometry
+    for epoch in range(120):
+        _ = train_step(model, loss_fn, optimizer, x_eval, y_eval)
+        
+    # 5. Measure final accuracy metrics
+    logits, _ = model['forward'](x_eval)
+    predictions = np.argmax(logits, axis=1)
+    accuracy = float(np.mean(predictions == y_eval))
+    
+    metrics = {
+        'accuracy': accuracy,
+        'x': x_eval,
+        'y': y_eval
+    }
+    
+    return model, metrics
 
 # Step 13 - improve_generalization (not yet solved)
 # TODO: implement
