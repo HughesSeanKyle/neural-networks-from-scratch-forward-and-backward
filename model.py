@@ -256,8 +256,26 @@ def make_sequential(layers):
         'backward': backward
     }
 
-# Step 8 - forward_backward (not yet solved)
-# TODO: implement
+# Step 8 - forward_backward
+def forward_backward(model, loss_fn, x, y):
+    """
+    Executes a complete forward/backward execution cycle on a sequential model dictionary.
+    
+    Returns:
+        loss: The scalar loss objective value.
+        model_grads: An ordered list containing parameter gradient dictionaries 
+                     matching the updated contract layout.
+    """
+    # 1. Forward Pass using the model's unified forward callable
+    logits, caches = model['forward'](x)
+    
+    # 2. Evaluate loss objective against true categorical labels
+    loss, dscores = loss_fn(logits, y)
+    
+    # 3. Backward Pass using the model's unified backward callable
+    _, model_grads = model['backward'](dscores, caches)
+    
+    return loss, model_grads
 
 # Step 9 - make_optimizer (not yet solved)
 # TODO: implement
