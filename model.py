@@ -277,8 +277,40 @@ def forward_backward(model, loss_fn, x, y):
     
     return loss, model_grads
 
-# Step 9 - make_optimizer (not yet solved)
-# TODO: implement
+# Step 9 - make_optimizer
+def make_optimizer(params, lr=1e-2, kind='sgd'):
+    """
+    Builds an optimizer that recursively traverses any arbitrary nesting 
+    of lists/dicts to update matching parameter arrays completely in-place.
+    
+    CONTRACT:
+        step(grads) applies an in-place update using a matching grads structure.
+    """
+    if kind != 'sgd':
+        raise ValueError(f"Unsupported optimizer kind: {kind}")
+        
+    def _recursive_update(p_node, g_node):
+        # Case A: If the node is a dictionary, traverse its string keys
+        if isinstance(p_node, dict):
+            for key in p_node:
+                if key in g_node:
+                    _recursive_update(p_node[key], g_node[key])
+                    
+        # Case B: If the node is a list, traverse its indices sequentially
+        elif isinstance(p_node, list):
+            for i in range(len(p_node)):
+                _recursive_update(p_node[i], g_node[i])
+                
+        # Case C: Leaf Node - Mutate the numpy parameter array directly in-place
+        elif isinstance(p_node, np.ndarray):
+            p_node -= lr * g_node
+
+    def step(grads):
+        _recursive_update(params, grads)
+        
+    return {
+        'step': step
+    }
 
 # Step 10 - train_step (not yet solved)
 # TODO: implement
