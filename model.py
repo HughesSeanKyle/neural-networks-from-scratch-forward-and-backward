@@ -40,8 +40,35 @@ def numerical_gradient(f, x, eps=1e-5):
         
     return grad
 
-# Step 2 - gradient_check (not yet solved)
-# TODO: implement
+# Step 2 - gradient_check
+def gradient_check(analytical_grad, numerical_grad, tol=1e-5):
+    """
+    Computes the maximum coordinate-wise relative error between the analytical
+    and numerical gradients, using tol as a safety floor in the denominator.
+    """
+    grad_a = np.asarray(analytical_grad, dtype=np.float64)
+    grad_n = np.asarray(numerical_grad, dtype=np.float64)
+    
+    # 1. Compute element-wise absolute difference (numerator)
+    abs_diff = np.abs(grad_a - grad_n)
+    
+    # 2. Compute element-wise maximum magnitude
+    max_mag = np.maximum(np.abs(grad_a), np.abs(grad_n))
+    
+    # 3. Apply tol as a safety floor to the denominator
+    denominator = np.maximum(max_mag, tol)
+    
+    # 4. Handle the edge case where both are exactly zero
+    # If both are exactly 0.0, the max_mag is 0.0. If abs_diff is also 0.0, error is 0.0
+    # We can mask where both are zero to output 0.0 exactly
+    both_zero_mask = (grad_a == 0.0) & (grad_n == 0.0)
+    
+    # Calculate element-wise relative error
+    rel_errors = abs_diff / denominator
+    rel_errors[both_zero_mask] = 0.0
+    
+    # Return the maximum relative error found across all elements
+    return float(np.max(rel_errors))
 
 # Step 3 - make_dense (not yet solved)
 # TODO: implement
