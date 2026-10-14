@@ -109,8 +109,36 @@ def make_dense(in_dim, out_dim, weight_init_fn):
         'backward': backward
     }
 
-# Step 4 - make_activation (not yet solved)
-# TODO: implement
+# Step 4 - make_activation
+def make_activation(kind="relu"):
+    """
+    Creates an activation layer matching the API contract.
+    CONTRACT:
+        forward(x) -> (y, cache)
+        backward(dout, cache) -> (dx, grads)
+    """
+    if kind != "relu":
+        raise ValueError(f"Unsupported activation type: {kind}")
+        
+    def forward(x):
+        # Store the original x in cache for the backward pass mask
+        cache = x
+        y = np.maximum(0, x)
+        return y, cache
+        
+    def backward(dout, cache):
+        x = cache
+        # dx is dout where x > 0, and 0 everywhere else
+        dx = dout * (x > 0)
+        # Activation layers contain no learnable parameters
+        grads = {}
+        return dx, grads
+        
+    return {
+        'params': {},
+        'forward': forward,
+        'backward': backward
+    }
 
 # Step 5 - initialize_weights (not yet solved)
 # TODO: implement
