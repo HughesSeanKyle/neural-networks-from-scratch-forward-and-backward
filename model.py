@@ -312,8 +312,24 @@ def make_optimizer(params, lr=1e-2, kind='sgd'):
         'step': step
     }
 
-# Step 10 - train_step (not yet solved)
-# TODO: implement
+# Step 10 - train_step
+def train_step(model, loss_fn, optimizer, x_batch, y_batch):
+    """
+    Performs exactly one complete forward-backward optimization step over a minibatch.
+    
+    CONTRACT:
+        Returns: A single Python float representing the scalar batch loss evaluated 
+                 BEFORE the parameter update. 
+        Mutates model parameters in-place via the optimizer.
+    """
+    # 1. Run the forward and backward mechanics to isolate the loss value and layer gradients
+    loss_scalar, grads_list = forward_backward(model, loss_fn, x_batch, y_batch)
+    
+    # 2. Trigger the optimization strategy to update all shared network arrays in-place
+    optimizer['step'](grads_list)
+    
+    # 3. Explicitly cast to and return a standard Python float
+    return float(loss_scalar)
 
 # Step 11 - train (not yet solved)
 # TODO: implement
