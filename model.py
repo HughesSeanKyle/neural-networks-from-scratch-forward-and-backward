@@ -70,8 +70,44 @@ def gradient_check(analytical_grad, numerical_grad, tol=1e-5):
     # Return the maximum relative error found across all elements
     return float(np.max(rel_errors))
 
-# Step 3 - make_dense (not yet solved)
-# TODO: implement
+# Step 3 - make_dense
+def make_dense(in_dim, out_dim, weight_init_fn):
+    """
+    Creates a dictionary representing a dense (linear) network layer matching the precise API contract.
+    
+    CONTRACT:
+        forward(x) -> (y, cache)
+        backward(dout, cache) -> (dx, grads)
+    """
+    # Initialize the parameters using the provided function
+    W, b = weight_init_fn(in_dim, out_dim)
+    params = {'W': W, 'b': b}
+    
+    def forward(x):
+        # Affine map: y = x @ W + b
+        y = np.dot(x, params['W']) + params['b']
+        # Store x in the cache to pass to backward
+        cache = x
+        return y, cache
+        
+    def backward(dout, cache):
+        x = cache
+        
+        # dL/dW = x.T @ dout
+        dW = np.dot(x.T, dout)
+        # dL/db = sum over the batch axis (axis 0)
+        db = np.sum(dout, axis=0)
+        # dL/dx = dout @ W.T
+        dx = np.dot(dout, params['W'].T)
+        
+        grads = {'W': dW, 'b': db}
+        return dx, grads
+        
+    return {
+        'params': params,
+        'forward': forward,
+        'backward': backward
+    }
 
 # Step 4 - make_activation (not yet solved)
 # TODO: implement
